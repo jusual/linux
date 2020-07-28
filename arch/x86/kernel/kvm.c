@@ -33,6 +33,7 @@
 #include <asm/hypervisor.h>
 #include <asm/tlb.h>
 #include <asm/cpuidle_haltpoll.h>
+#include <asm/pci_x86.h>
 
 DEFINE_STATIC_KEY_FALSE(kvm_async_pf_enabled);
 
@@ -715,6 +716,18 @@ static uint32_t __init kvm_detect(void)
 	return kvm_cpuid_base();
 }
 
+static int __init kvm_pci_arch_init(void)
+{
+	if (raw_pci_ext_ops &&
+	    kvm_para_has_feature(KVM_FEATURE_PCI_GO_MMCONFIG)) {
+		pr_info("PCI: Using MMCONFIG for base access\n");
+		raw_pci_ops = raw_pci_ext_ops;
+		return 0;
+	}
+
+	return 1;
+}
+
 static void __init kvm_apic_init(void)
 {
 #if defined(CONFIG_SMP)
@@ -726,6 +739,7 @@ static void __init kvm_apic_init(void)
 static void __init kvm_init_platform(void)
 {
 	kvmclock_init();
+	x86_init.pci.arch_init = kvm_pci_arch_init;
 	x86_platform.apic_post_init = kvm_apic_init;
 }
 
